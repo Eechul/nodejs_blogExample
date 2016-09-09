@@ -1,27 +1,29 @@
-var express = require('express'),
- path = require('path'),
- favicon = require('serve-favicon'),
- logger = require('morgan'),
- cookieParser = require('cookie-parser'),
- bodyParser = require('body-parser'),
- routes = require('./routes/index'),
- users = require('./routes/users'),
- mongo = require('mongoskin'),
- //methodOverride = require('methodOverride'),
-// Connection URL
- dburl = 'mongodb://localhost:27017/blog',
-// Use connect method to connect to the Server
- db = mongo.db(dburl, {safe: true}),
- collection = {
-  articles: db.collection('articles'),
-  users: db.collection('users')
-};
+  var express = require('express'),
+   path = require('path'),
+   favicon = require('serve-favicon'),
+   logger = require('morgan'),
+   cookieParser = require('cookie-parser'),
+   bodyParser = require('body-parser'),
+   routes = require('./routes/index'),
+   users = require('./routes/user'),
+   mongo = require('mongoskin'),
+   //methodOverride = require('methodOverride'),
+  // Connection URL
+   //dburl = process.env.MONGOHQ_URL || 'mongodb://@localhost:28017/nodejs_blogExample',
+  // Use connect method to connect to the Server
+
+   db = mongo.db("mongodb://localhost:27017/nodejs_blogExample", {native_parser:true}),
+   collections = {
+    articles: db.collection('articles'),
+    users: db.collection('users')
+  };
 
 
 var app = express();
 app.locals.appTitle = 'blog-express';
+
 app.use(function(req, res, next) {
-  if(!collection.articles || !collections.users){ // 두 프로퍼티가 비어있다면!
+  if(!collections.articles || !collections.users) { // 두 프로퍼티가 비어있다면!
     return next(new Error("No collections."));
   }
   req.collections = collections;
@@ -29,7 +31,6 @@ app.use(function(req, res, next) {
   req.dongs = "dongdong"; // 예제 써보기
   return next();
 });
-
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -43,9 +44,24 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(favicon(__dirname + '/public/favicon.ico'));
 
-app.use('/', routes);
-app.use('/users', users);
+// Pages and routes
+app.get('/', routes.index);
+app.get('/login', routes.user.login);
+app.post('/login', routes.user.authenticate);
+app.get('/logout', routes.user.logout);
+app.get('/admin', routes.article.admin);
+app.get('/post', routes.article.post);
+app.post('/post', routes.article.postArticle);
+app.get('/articles/:slug', routes.article.show);
+
+// REST API routes : get post delete put
+app.get('/api/articles', routes.article.list);
+app.post('/api/articles', routes.article.add);
+app.delete('/api/articles/:id', routes.article.del);
+app.put('/api/articles/:id', routes.article.edit);
+
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
