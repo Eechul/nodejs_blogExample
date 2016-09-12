@@ -3,6 +3,7 @@
    favicon = require('serve-favicon'),
    logger = require('morgan'),
    cookieParser = require('cookie-parser'),
+   session = require('express-session'),
    bodyParser = require('body-parser'),
    routes = require('./routes/index'),
    users = require('./routes/user'),
@@ -42,18 +43,35 @@ app.use(logger('dev'));
 //app.use(methodOverride());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
-app.use(cookieParser());
+app.use(cookieParser('3kdksmnsmd'));
+app.use(session({secret: 'dksmdnmsms'}));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(favicon(__dirname + '/public/favicon.ico'));
 
+// 인증 미들웨어
+app.use(function(req, res, next) {
+    if(req.session && req.session.admin) {
+        res.locals.admin = true;
+    }
+    next();
+});
+
+// 권한부여 미들웨어
+var authorize = function(req, res, next) {
+    if(req.session && req.session.admin) {
+        return next();
+    } else {
+        return res.send(401);
+    }
+};
 // Pages and routes
 app.get('/', routes.index);
 app.get('/login', routes.user.login);
 app.post('/login', routes.user.authenticate);
 app.get('/logout', routes.user.logout);
-app.get('/admin', routes.article.admin);
-app.get('/post', routes.article.post);
-app.post('/post', routes.article.postArticle);
+app.get('/admin', authorize ,routes.article.admin);
+app.get('/post', authorize, routes.article.post);
+app.post('/post', authorize, routes.article.postArticle);
 app.get('/articles/:slug', routes.article.show);
 
 // REST API routes : get post delete put
